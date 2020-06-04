@@ -66,25 +66,11 @@ __attribute__((section("__versions"))) = {
 #include <linux/timer.h>
 #include <linux/wait.h>
 
-// #if	(LINUX_VERSION_CODE < 132096)
-// /* 2.2 kernels */
-// #include <linux/interrupt.h>
-// #endif	/* 2.2 kernels */
-
 #include <linux/fcntl.h>
 #include <linux/tty.h>
 #include <linux/tty_flip.h>
 #include <linux/serial.h>
 #include <linux/string.h>
-// #if	(LINUX_VERSION_CODE < 132608)
-// /* 2.2 and 2.4 kernels */
-// #include <linux/delay.h>
-// #endif
-// #include <linux/major.h>
-// #include <linux/mm.h>
-// #include <linux/ioport.h>
-// #include <linux/slab.h>
-// #include <linux/vmalloc.h>
 
 #if	(LINUX_VERSION_CODE >= 132096)
 /* 2.4 kernels and after */
