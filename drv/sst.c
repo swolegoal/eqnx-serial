@@ -20,21 +20,21 @@
 #define STATIC
 #include <linux/config.h>
 #include <linux/version.h>
-#if	(LINUX_VERSION_CODE < 132608)
-/* 2.2 and 2.4 kernels */
-#define __NO_VERSION__
-#endif
+// #if	(LINUX_VERSION_CODE < 132608)
+// /* 2.2 and 2.4 kernels */
+// #define __NO_VERSION__
+// #endif
 
 #ifdef CONFIG_MODVERSIONS
 #define MODVERSIONS	1
 #endif
 
-#if	(LINUX_VERSION_CODE < 132608)
-/* 2.2 and 2.4 kernels */
-#ifdef MODVERSIONS
-#include <linux/modversions.h>
-#endif /* MODVERSIONS */
-#endif
+// #if	(LINUX_VERSION_CODE < 132608)
+// /* 2.2 and 2.4 kernels */
+// #ifdef MODVERSIONS
+// #include <linux/modversions.h>
+// #endif /* MODVERSIONS */
+// #endif
 
 #include <linux/module.h>
 #define EQNX_VERSION_CODE LINUX_VERSION_CODE
@@ -66,25 +66,25 @@ __attribute__((section("__versions"))) = {
 #include <linux/timer.h>
 #include <linux/wait.h>
 
-#if	(LINUX_VERSION_CODE < 132096)
-/* 2.2 kernels */
-#include <linux/interrupt.h>
-#endif	/* 2.2 kernels */
+// #if	(LINUX_VERSION_CODE < 132096)
+// /* 2.2 kernels */
+// #include <linux/interrupt.h>
+// #endif	/* 2.2 kernels */
 
 #include <linux/fcntl.h>
 #include <linux/tty.h>
 #include <linux/tty_flip.h>
 #include <linux/serial.h>
 #include <linux/string.h>
-#if	(LINUX_VERSION_CODE < 132608)
-/* 2.2 and 2.4 kernels */
-#include <linux/delay.h>
-#endif
-#include <linux/major.h>
-#include <linux/mm.h>
-#include <linux/ioport.h>
-#include <linux/slab.h>
-#include <linux/vmalloc.h>
+// #if	(LINUX_VERSION_CODE < 132608)
+// /* 2.2 and 2.4 kernels */
+// #include <linux/delay.h>
+// #endif
+// #include <linux/major.h>
+// #include <linux/mm.h>
+// #include <linux/ioport.h>
+// #include <linux/slab.h>
+// #include <linux/vmalloc.h>
 
 #if	(LINUX_VERSION_CODE >= 132096)
 /* 2.4 kernels and after */
@@ -806,10 +806,10 @@ static uchar_t cmn_irq[] = {0xff, 0x3, 0x4, 0x5, 0x7, 0xa, 0xb, 0xc};
 /* serial subtype definitions */
 #define SERIAL_TYPE_NORMAL	1
 #define SERIAL_TYPE_CALLOUT	2
-#if	(LINUX_VERSION_CODE < 132608)
-/* 2.2 and 2.4 kernels */
-static int eqnx_refcount;
-#endif
+// #if	(LINUX_VERSION_CODE < 132608)
+// /* 2.2 and 2.4 kernels */
+// static int eqnx_refcount;
+// #endif
 #define pcisize  0x44			/* PCI data structure size */
 char *eqnPCIcsh;
 struct tty_driver *eqnx_driver; 
@@ -896,13 +896,13 @@ int	pnp_found = 0;
 #endif
 #endif
 
-#if	(LINUX_VERSION_CODE < 132608)
-/* 2.2 and 2.4 kernels */
-#define	MY_GROUP()	(current->pgrp)
-#else
+// #if	(LINUX_VERSION_CODE < 132608)
+// /* 2.2 and 2.4 kernels */
+// #define	MY_GROUP()	(current->pgrp)
+// #else
 /* 2.6 kernels and after */
-#define	MY_GROUP()	(process_group(current))
-#endif
+#define	MY_GROUP()	(pid_nr(current->signal->tty->pgrp))
+// #endif
 
 /*
 ** eqnx_open(tty, filp)
@@ -921,17 +921,17 @@ int eqnx_open(struct tty_struct *tty, struct file * filp)
 	int rc = 0;
 	unsigned long flags;
 
-#if	(LINUX_VERSION_CODE < 132608)
-	/* 2.2 and 2.4 kernels */
-	MOD_INC_USE_COUNT;
-	minor = MINOR(tty->device);
-	major = MAJOR(tty->device);
-#else
+// #if	(LINUX_VERSION_CODE < 132608)
+// 	/* 2.2 and 2.4 kernels */
+// 	MOD_INC_USE_COUNT;
+// 	minor = MINOR(tty->device);
+// 	major = MAJOR(tty->device);
+// #else
 	/* 2.6+ kernels */
 	try_module_get(THIS_MODULE);
 	major = tty->driver->major;
 	minor = tty->driver->minor_start + tty->index;
-#endif
+// #endif
 
 	d = SSTMINOR(major, minor);
 
@@ -1033,14 +1033,14 @@ int eqnx_open(struct tty_struct *tty, struct file * filp)
 modem_wait:
 				mpc->mpc_mpa_call_back_wait++;
 				spin_unlock_irqrestore(&mpd->mpd_lock, flags);
-#if	(LINUX_VERSION_CODE < 132608)
-				/* 2.2 and 2.4 kernels */
-				interruptible_sleep_on(&mpc->mpc_mpa_call_back);
-#else
+// #if	(LINUX_VERSION_CODE < 132608)
+// 				/* 2.2 and 2.4 kernels */
+// 				interruptible_sleep_on(&mpc->mpc_mpa_call_back);
+// #else
 				/* 2.6 kernels */
 				wait_event_interruptible(mpc->mpc_mpa_call_back,
 					mpc->mpc_mpa_call_back_wait == 0);
-#endif
+// #endif
 				spin_lock_irqsave(&mpd->mpd_lock, flags);
 				if eqn_fatal_signal {
 					spin_unlock_irqrestore(&mpd->mpd_lock, flags);
@@ -1075,19 +1075,19 @@ modem_wait:
 	if (!(mpc->flags & ASYNC_INITIALIZED)) {
 		mpc->mpc_tty = tty;
 		tty->driver_data = mpc;
-#if	(LINUX_VERSION_CODE < 132608)
-		/* 2.2 and 2.4 kernels */
-		if (tty->driver.subtype == SERIAL_TYPE_NORMAL)
-			*tty->termios = *mpc->normaltermios;
-#if (LINUX_VERSION_CODE < 132096)
-		/* 2.2 kernels */
-		else
-			*tty->termios = *mpc->callouttermios;
-#endif
-#else
+// #if	(LINUX_VERSION_CODE < 132608)
+// 		/* 2.2 and 2.4 kernels */
+// 		if (tty->driver.subtype == SERIAL_TYPE_NORMAL)
+// 			*tty->termios = *mpc->normaltermios;
+// #if (LINUX_VERSION_CODE < 132096)
+// 		/* 2.2 kernels */
+// 		else
+// 			*tty->termios = *mpc->callouttermios;
+// #endif
+// #else
 		/* 2.6 kernels */
 		*tty->termios = *mpc->normaltermios;
-#endif
+// #endif
 #ifdef RS422
 		/*    force CLOCAL on for RS422 ports */
 		if (mpc->mpc_icp->lmx[mpc->mpc_lmxno].lmx_id == LMX_8E_422 ||
@@ -1112,19 +1112,19 @@ modem_wait:
 	tp = mpc->mpc_tty;
 
 	if (tp->termios == NULL) {
-#if     (LINUX_VERSION_CODE < 132608)
-		/* 2.2 and 2.4 kernels */
-		if (tty->driver.subtype == SERIAL_TYPE_NORMAL)
-			*tp->termios = *mpc->normaltermios;
-#if (LINUX_VERSION_CODE < 132096)
-		/* 2.2 kernels */
-		else
-			*tp->termios = *mpc->callouttermios;
-#endif
-#else
+// #if     (LINUX_VERSION_CODE < 132608)
+// 		/* 2.2 and 2.4 kernels */
+// 		if (tty->driver.subtype == SERIAL_TYPE_NORMAL)
+// 			*tp->termios = *mpc->normaltermios;
+// #if (LINUX_VERSION_CODE < 132096)
+// 		/* 2.2 kernels */
+// 		else
+// 			*tp->termios = *mpc->callouttermios;
+// #endif
+// #else
 		/* 2.6 kernels */
 		*tp->termios = *mpc->normaltermios;
-#endif
+// #endif
 	}
 
 /*
@@ -1138,14 +1138,14 @@ modem_wait:
 		if(win16) 
 			mega_pop_win(81);
 		spin_unlock_irqrestore(&mpd->mpd_lock, flags);
-#if	(LINUX_VERSION_CODE < 132608)
-		/* 2.2 and 2.4 kernels */
-		interruptible_sleep_on(&mpc->close_wait);
-#else
+// #if	(LINUX_VERSION_CODE < 132608)
+// 		/* 2.2 and 2.4 kernels */
+// 		interruptible_sleep_on(&mpc->close_wait);
+// #else
 		/* 2.6 kernels */
 		wait_event_interruptible(mpc->close_wait, 
 			(mpc->flags & ASYNC_CLOSING) == 0);
-#endif
+// #endif
 		if (mpc->flags & ASYNC_HUP_NOTIFY)
 			return(-EAGAIN);
 
@@ -1304,7 +1304,7 @@ modem_wait:
 			*tp->termios = *mpc->callouttermios;
 #endif
 #else
-	/* 2.6 kernels and leter */
+	/* 2.6 kernels and later */
 	*tp->termios = *mpc->normaltermios;
 #endif
 

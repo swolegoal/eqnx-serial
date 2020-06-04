@@ -1,9 +1,9 @@
-sst.o: /home/fuxlovespoo/eqnx-4.11-1/drv/sst.c include/linux/autoconf.h \
- include/linux/config.h include/linux/autoconf.h include/linux/version.h \
- include/linux/module.h include/linux/list.h include/linux/stddef.h \
- include/linux/compiler.h include/linux/compiler-gcc.h \
- include/linux/compiler-gcc4.h include/linux/poison.h \
- include/linux/prefetch.h include/linux/types.h \
+sst.o: /mnt/big-boy/home/fuxlovespoo/eqnx-4.11-1/drv/sst.c \
+ include/linux/autoconf.h include/linux/config.h include/linux/autoconf.h \
+ include/linux/version.h include/linux/module.h include/linux/list.h \
+ include/linux/stddef.h include/linux/compiler.h \
+ include/linux/compiler-gcc.h include/linux/compiler-gcc4.h \
+ include/linux/poison.h include/linux/prefetch.h include/linux/types.h \
  /usr/src/linux-source-2.6.32/arch/x86/include/asm/types.h \
  include/asm-generic/types.h include/asm-generic/int-ll64.h \
  /usr/src/linux-source-2.6.32/arch/x86/include/asm/bitsperlong.h \
@@ -176,10 +176,22 @@ sst.o: /home/fuxlovespoo/eqnx-4.11-1/drv/sst.c include/linux/autoconf.h \
  /usr/src/linux-source-2.6.32/arch/x86/include/asm/uaccess_32.h \
  include/linux/tty_driver.h include/linux/cdev.h \
  include/linux/tty_ldisc.h include/linux/tty_flip.h \
- include/linux/serial.h include/linux/mm.h include/linux/debug_locks.h \
+ include/linux/serial.h include/linux/isapnp.h include/linux/pnp.h \
+ include/linux/device.h include/linux/ioport.h include/linux/klist.h \
+ include/linux/pm.h \
+ /usr/src/linux-source-2.6.32/arch/x86/include/asm/device.h \
+ include/linux/pm_wakeup.h include/linux/mod_devicetable.h \
+ /usr/src/linux-source-2.6.32/arch/x86/include/asm/io.h \
+ /usr/src/linux-source-2.6.32/arch/x86/include/asm/io_32.h \
+ include/asm-generic/iomap.h include/linux/vmalloc.h include/linux/pci.h \
+ include/linux/pci_regs.h include/linux/io.h include/linux/irqreturn.h \
+ include/linux/pci_ids.h include/linux/dmapool.h \
+ /usr/src/linux-source-2.6.32/arch/x86/include/asm/scatterlist.h \
+ include/asm-generic/scatterlist.h \
+ /usr/src/linux-source-2.6.32/arch/x86/include/asm/pci.h \
+ include/linux/mm.h include/linux/debug_locks.h \
  /usr/src/linux-source-2.6.32/arch/x86/include/asm/pgtable.h \
  /usr/src/linux-source-2.6.32/arch/x86/include/asm/e820.h \
- include/linux/ioport.h \
  /usr/src/linux-source-2.6.32/arch/x86/include/asm/pgtable_32.h \
  /usr/src/linux-source-2.6.32/arch/x86/include/asm/pgtable_32_types.h \
  /usr/src/linux-source-2.6.32/arch/x86/include/asm/fixmap.h \
@@ -197,31 +209,18 @@ sst.o: /home/fuxlovespoo/eqnx-4.11-1/drv/sst.c include/linux/autoconf.h \
  /usr/src/linux-source-2.6.32/arch/x86/include/asm/apicdef.h \
  /usr/src/linux-source-2.6.32/arch/x86/include/asm/pgtable-2level.h \
  include/asm-generic/pgtable.h include/linux/page-flags.h \
- include/linux/vmstat.h include/linux/vmalloc.h include/linux/isapnp.h \
- include/linux/pnp.h include/linux/device.h include/linux/klist.h \
- include/linux/pm.h \
- /usr/src/linux-source-2.6.32/arch/x86/include/asm/device.h \
- include/linux/pm_wakeup.h include/linux/mod_devicetable.h \
- /usr/src/linux-source-2.6.32/arch/x86/include/asm/io.h \
- /usr/src/linux-source-2.6.32/arch/x86/include/asm/io_32.h \
- include/asm-generic/iomap.h include/linux/pci.h include/linux/pci_regs.h \
- include/linux/io.h include/linux/irqreturn.h include/linux/pci_ids.h \
- include/linux/dmapool.h \
- /usr/src/linux-source-2.6.32/arch/x86/include/asm/scatterlist.h \
- include/asm-generic/scatterlist.h \
- /usr/src/linux-source-2.6.32/arch/x86/include/asm/pci.h \
- include/asm-generic/pci-dma-compat.h include/linux/dma-mapping.h \
- include/linux/dma-attrs.h include/linux/bug.h \
- include/linux/scatterlist.h \
+ include/linux/vmstat.h include/asm-generic/pci-dma-compat.h \
+ include/linux/dma-mapping.h include/linux/dma-attrs.h \
+ include/linux/bug.h include/linux/scatterlist.h \
  /usr/src/linux-source-2.6.32/arch/x86/include/asm/dma-mapping.h \
  include/linux/kmemcheck.h include/linux/dma-debug.h \
  /usr/src/linux-source-2.6.32/arch/x86/include/asm/swiotlb.h \
  include/linux/swiotlb.h include/asm-generic/dma-coherent.h \
  include/asm-generic/dma-mapping-common.h include/asm-generic/pci.h \
- /home/fuxlovespoo/eqnx-4.11-1/drv/../include/icp.h \
- /home/fuxlovespoo/eqnx-4.11-1/drv/../include/eqnx.h \
- /home/fuxlovespoo/eqnx-4.11-1/drv/../include/brdtab.h \
- /home/fuxlovespoo/eqnx-4.11-1/drv/../include/eqnx_ioctl.h \
- /home/fuxlovespoo/eqnx-4.11-1/drv/../include/ist.h \
- /home/fuxlovespoo/eqnx-4.11-1/drv/../include/ramp.h \
- /home/fuxlovespoo/eqnx-4.11-1/drv/../include/brdtab.c
+ /mnt/big-boy/home/fuxlovespoo/eqnx-4.11-1/drv/../include/icp.h \
+ /mnt/big-boy/home/fuxlovespoo/eqnx-4.11-1/drv/../include/eqnx.h \
+ /mnt/big-boy/home/fuxlovespoo/eqnx-4.11-1/drv/../include/brdtab.h \
+ /mnt/big-boy/home/fuxlovespoo/eqnx-4.11-1/drv/../include/eqnx_ioctl.h \
+ /mnt/big-boy/home/fuxlovespoo/eqnx-4.11-1/drv/../include/ist.h \
+ /mnt/big-boy/home/fuxlovespoo/eqnx-4.11-1/drv/../include/ramp.h \
+ /mnt/big-boy/home/fuxlovespoo/eqnx-4.11-1/drv/../include/brdtab.c

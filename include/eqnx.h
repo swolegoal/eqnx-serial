@@ -879,7 +879,7 @@ struct	mpchan {
 	int	open_wait_wait;
 
 	int	refcount;
-	struct termios *normaltermios;
+	struct ktermios *normaltermios;
 	struct termios *callouttermios;
 	pid_t	session;
 	pid_t	pgrp;
