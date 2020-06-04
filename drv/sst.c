@@ -803,8 +803,8 @@ struct tty_driver *eqnx_driver;
 struct tty_driver *eqnx_callout_driver;
 #endif
 struct tty_struct **eqnx_ttys;
-struct termios **eqnx_termios;
-struct termios **eqnx_termioslocked;
+struct ktermios **eqnx_termios;
+struct ktermios **eqnx_termioslocked;
 static struct timer_list lmx_wait_timer;
 static struct timer_list eqnx_timer, eqnx_ramp_timer;
 void sstpoll(unsigned long arg);
@@ -832,16 +832,18 @@ static int	eqnx_txcooksize = 0;
 static int	eqnx_txcookrealsize = 0;
 static struct tty_struct	*eqnx_txcooktty = (struct tty_struct *) NULL;
 
-/*	Default termios structure.  */
+/*	Default ktermios structure.  */
 
-static struct termios		eqnx_deftermios = {
+static struct ktermios		eqnx_deftermios = {
 	0,
 	0,
 	/*(B9600 | CS8 | CREAD | HUPCL),*/
 	(B9600 | CS8 | CREAD | HUPCL | CLOCAL),
 	0,
 	0,
-	INIT_C_CC
+	INIT_C_CC,
+        0,
+        0
 };
 
 #define	XMIT_BUF_SIZE		4096
@@ -1061,19 +1063,8 @@ modem_wait:
 	if (!(mpc->flags & ASYNC_INITIALIZED)) {
 		mpc->mpc_tty = tty;
 		tty->driver_data = mpc;
-// #if	(LINUX_VERSION_CODE < 132608)
-// 		/* 2.2 and 2.4 kernels */
-// 		if (tty->driver.subtype == SERIAL_TYPE_NORMAL)
-// 			*tty->termios = *mpc->normaltermios;
-// #if (LINUX_VERSION_CODE < 132096)
-// 		/* 2.2 kernels */
-// 		else
-// 			*tty->termios = *mpc->callouttermios;
-// #endif
-// #else
 		/* 2.6 kernels */
 		*tty->termios = *mpc->normaltermios;
-// #endif
 #ifdef RS422
 		/*    force CLOCAL on for RS422 ports */
 		if (mpc->mpc_icp->lmx[mpc->mpc_lmxno].lmx_id == LMX_8E_422 ||
@@ -1431,10 +1422,10 @@ static void eqnx_close(struct tty_struct * tty, struct file * filp)
 	mpc->mpc_icpi->ssp.cin_attn_ena &= ~ENA_DCD_CNG;
 	mpc->mpc_icpo->ssp.cout_cpu_req &= ~TX_SUSP;
 	set_bit(TTY_IO_ERROR, &tty->flags);
-	if (tty->ldisc.flush_buffer)
-		(tty->ldisc.flush_buffer)(tty);
+	if (tty->ldisc->ops.flush_buffer)
+		(tty->ldisc->ops.flush_buffer)(tty);
 #ifdef DEBUG
-	printk("after ldisc.flush_buffer for device %d\n",d);
+	printk("after ldisc->ops.flush_buffer for device %d\n",d);
 #endif
 	chanoff(mpc);
 #ifdef DEBUG
@@ -1825,7 +1816,7 @@ static void eqnx_put_char(struct tty_struct *tty, unsigned char ch)
 
 		if (write_wakeup_deferred) {
 			write_wakeup_deferred = 0;
-			tty->ldisc.write_wakeup(tty);
+			tty->ldisc->ops.write_wakeup(tty);
 		}
 	} else{
 		if (eqnx_txcooksize >= XMIT_BUF_SIZE -1){
@@ -1872,7 +1863,7 @@ static void eqnx_flush_chars(struct tty_struct *tty)
 
 		if (write_wakeup_deferred) {
 			write_wakeup_deferred = 0;
-			tty->ldisc.write_wakeup(tty);
+			tty->ldisc->ops.write_wakeup(tty);
 		}
 	}
 }
@@ -2096,7 +2087,7 @@ static void eqnx_flush_buffer(struct tty_struct *tty)
 
 	if (write_wakeup_deferred) {
 		write_wakeup_deferred = 0;
-		tty->ldisc.write_wakeup(tty);
+		tty->ldisc->ops.write_wakeup(tty);
 	}
 }
 
@@ -2183,7 +2174,7 @@ static void eqnx_flush_buffer_locked(struct tty_struct *tty)
 	wake_up_interruptible(&tty->write_wait);
 	/* signal write wakeup when safe to call ldisc */
 	if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) &&
-		tty->ldisc.write_wakeup)
+		tty->ldisc->ops.write_wakeup)
 		write_wakeup_deferred++;
 }
 
@@ -2241,12 +2232,12 @@ static void eqnx_unthrottle(struct tty_struct * tty)
 ** Device termios structure has been modified.
 */
 static void eqnx_set_termios(struct tty_struct *tty, 
-		struct termios * old)
+		struct ktermios * old)
 {
 	register struct mpchan *mpc = (struct mpchan *)tty->driver_data;
 	struct mpdev *mpd;
 	int d;
-	struct termios *tiosp;
+	struct ktermios *tiosp;
 	int win16;
 	unsigned long flags;
 
@@ -2511,7 +2502,7 @@ static void eqnx_hangup(struct tty_struct *tty)
 
 	if (write_wakeup_deferred) {
 		write_wakeup_deferred = 0;
-		tty->ldisc.write_wakeup(tty);
+		tty->ldisc->ops.write_wakeup(tty);
 	}
 }
 
@@ -3710,23 +3701,23 @@ printk("eqnx_init:queue size for board %d = %d\n\n", k, mpd->mpd_hwq->hwq_size);
 
 
 				if((mpc->normaltermios = 
-				(struct termios *)vmalloc(sizeof(
-				struct termios))) == (struct termios *) NULL){
-					printk("EQUINOX: Failed to allocate virtual address space of size %d for normaltermios\n", (unsigned int)sizeof(struct termios));
+				(struct ktermios *)vmalloc(sizeof(
+				struct ktermios))) == (struct ktermios *) NULL){
+					printk("EQUINOX: Failed to allocate virtual address space of size %d for normaltermios\n", (unsigned int)sizeof(struct ktermios));
 					return(-1);
 				}
 				memset(mpc->normaltermios, 0, 
-					sizeof(struct termios));
+					sizeof(struct ktermios));
 				*mpc->normaltermios = eqnx_deftermios;
 #if	(LINUX_VERSION_CODE < 132096)
 				if((mpc->callouttermios = 
-				(struct termios *)vmalloc(sizeof(
-				struct termios))) == (struct termios *) NULL){
-					printk("EQUINOX: Failed to allocate virtual address space of size %d for callouttermios\n", (unsigned int)sizeof(struct termios));
+				(struct ktermios *)vmalloc(sizeof(
+				struct ktermios))) == (struct ktermios *) NULL){
+					printk("EQUINOX: Failed to allocate virtual address space of size %d for callouttermios\n", (unsigned int)sizeof(struct ktermios));
 					return(-1);
 				}
 				memset(mpc->callouttermios, 0, 
-					sizeof(struct termios));
+					sizeof(struct ktermios));
 				*mpc->callouttermios = eqnx_deftermios;
 #endif
 				mpc->closing_wait = CLSTIMEO;
@@ -4393,12 +4384,17 @@ void cleanup_module(void)
 
 	if (eqnx_ttys != (struct tty_struct **) NULL)
 		vfree((void *)eqnx_ttys);
-	if (eqnx_termios != (struct termios **) NULL)
+	if (eqnx_termios != (struct ktermios **) NULL)
 		vfree((void *) eqnx_termios);
-	if (eqnx_termioslocked != (struct termios **) NULL)
+	if (eqnx_termioslocked != (struct ktermios **) NULL)
 		vfree((void *)eqnx_termioslocked);
-	if (eqnx_driver != (struct tty_driver *) NULL)
+	if (eqnx_driver != (struct tty_driver *) NULL) {
+		int _i, _j;
+		for (_i =0, _j = 0; _i < nmegaport; _i += 2, _j++)
+			vfree((void *)eqnx_driver[_j].ops);
+
 		vfree((void *)eqnx_driver);
+        }
 #if (LINUX_VERSION_CODE < 132096)
 	if (eqnx_callout_driver != (struct tty_driver *) NULL)
 		vfree((void *)eqnx_callout_driver);
@@ -5727,7 +5723,7 @@ static int megamodem(int d, int cmd)
 */
 static int megaparam( int chan) {
 register struct mpchan *mpc;
-volatile register struct termios *tiosp;
+volatile register struct ktermios *tiosp;
 volatile icpiaddr_t icpi;
 volatile icpoaddr_t icpo;
 unsigned speed;
@@ -6945,7 +6941,7 @@ void sstpoll(unsigned long arg)
 								if (write_wakeup_deferred) {
 									spin_unlock_irqrestore(&mpd->mpd_lock, flags);
 									write_wakeup_deferred = 0;
-									mpc->mpc_tty->ldisc.write_wakeup(mpc->mpc_tty);
+									mpc->mpc_tty->ldisc->ops.write_wakeup(mpc->mpc_tty);
 									spin_lock_irqsave(&mpd->mpd_lock, flags);
 								}
 							}
@@ -6971,7 +6967,7 @@ void sstpoll(unsigned long arg)
 								if (write_wakeup_deferred) {
 									spin_unlock_irqrestore(&mpd->mpd_lock, flags);
 									write_wakeup_deferred = 0;
-									mpc->mpc_tty->ldisc.write_wakeup(mpc->mpc_tty);
+									mpc->mpc_tty->ldisc->ops.write_wakeup(mpc->mpc_tty);
 									spin_lock_irqsave(&mpd->mpd_lock, flags);
 								}
 							}
@@ -7139,7 +7135,7 @@ printk("ev_lmx_chg  rng_last=%x  port=%d\n",icp->icp_rng_last,port);
 						if (write_wakeup_deferred) {
 							spin_unlock_irqrestore(&mpd->mpd_lock, flags);
 							write_wakeup_deferred = 0;
-							mpc->mpc_tty->ldisc.write_wakeup(mpc->mpc_tty);
+							mpc->mpc_tty->ldisc->ops.write_wakeup(mpc->mpc_tty);
 							spin_lock_irqsave(&mpd->mpd_lock, flags);
 						}
 					}
@@ -7164,7 +7160,7 @@ printk("ev_lmx_chg  rng_last=%x  port=%d\n",icp->icp_rng_last,port);
 						if (write_wakeup_deferred) {
 							spin_unlock_irqrestore(&mpd->mpd_lock, flags);
 							write_wakeup_deferred = 0;
-							mpc->mpc_tty->ldisc.write_wakeup(mpc->mpc_tty);
+							mpc->mpc_tty->ldisc->ops.write_wakeup(mpc->mpc_tty);
 							spin_lock_irqsave(&mpd->mpd_lock, flags);
 						}
 					}
@@ -8161,8 +8157,8 @@ static void megatxint(struct mpchan *mpc)
 		SSTMINOR(mpc->mpc_major, mpc->mpc_minor));
 #endif
 	if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) 
-			&& tty->ldisc.write_wakeup)
-			(tty->ldisc.write_wakeup)(tty);
+			&& tty->ldisc->ops.write_wakeup)
+			(tty->ldisc->ops.write_wakeup)(tty);
 		wake_up_interruptible(&tty->write_wait);
 }
 
@@ -8189,7 +8185,7 @@ static void megainput( register struct mpchan *mpc, unsigned long flags)
 	unsigned int tagp;
 	char fifo[0x10];
 	unsigned short err;
-	struct termios *tiosp;
+	struct ktermios *tiosp;
 	icpoaddr_t icpo;
 	unsigned char *cbuf;
 	char *fbuf;
@@ -8246,7 +8242,7 @@ static void megainput( register struct mpchan *mpc, unsigned long flags)
 	/* 2.6.16+ kernels */
 	rcv_cnt = MIN(rcv_cnt, tp->receive_room);
 #else
-	rcv_cnt = MIN(rcv_cnt, tp->ldisc.receive_room(tp));
+	rcv_cnt = MIN(rcv_cnt, tp->ldisc->ops.receive_room(tp));
 #endif
 
 	if(rcv_cnt == 0) {
@@ -8611,7 +8607,7 @@ static void megainput( register struct mpchan *mpc, unsigned long flags)
 	** drop mpdev board lock, reacquire after receive_buf
 	*/
 	spin_unlock_irqrestore(&mpc->mpc_mpd->mpd_lock, flags);
-	tp->ldisc.receive_buf(tp, tp->flip.char_buf, 
+	tp->ldisc->ops.receive_buf(tp, tp->flip.char_buf, 
 		tp->flip.flag_buf,ldisc_count);
 	spin_lock_irqsave(&mpc->mpc_mpd->mpd_lock, flags);
 #endif
@@ -8701,7 +8697,7 @@ static void megamint(register struct mpchan *mpc)
 */
 static void megasint(register struct mpchan *mpc, unsigned long flags)
 {
-	register struct termios *tiosp;
+	register struct ktermios *tiosp;
 	struct tty_struct *tty = mpc->mpc_tty;
 	char	fbuf, cbuf;
 
@@ -8736,7 +8732,7 @@ static void megasint(register struct mpchan *mpc, unsigned long flags)
 		/* 2.6.16+ kernels */
 		if (tty->receive_room) {
 #else
-		if (tty->ldisc.receive_room(tty)) {
+		if (tty->ldisc->ops.receive_room(tty)) {
 #endif
 			fbuf = TTY_BREAK;
 			cbuf = 0;
@@ -8753,7 +8749,7 @@ static void megasint(register struct mpchan *mpc, unsigned long flags)
 			** drop mpdev board lock, reacquire after receive_buf
 			*/
 			spin_unlock_irqrestore(&mpc->mpc_mpd->mpd_lock, flags);
-			tty->ldisc.receive_buf(tty, &cbuf, &fbuf, 1);
+			tty->ldisc->ops.receive_buf(tty, &cbuf, &fbuf, 1);
 			spin_lock_irqsave(&mpc->mpc_mpd->mpd_lock, flags);
 		}
 	}
@@ -9171,7 +9167,7 @@ static int set_modem_info(struct mpchan *mpc, unsigned int cmd,
 	unsigned int arg, temp;
 	icpoaddr_t icpo = mpc->mpc_icpo;
 	unsigned long flags;
-	struct termios *term = tty->termios;
+	struct ktermios *term = tty->termios;
 
 #if (EQNX_VERSION_CODE < 131328)  
 	arg = get_fs_long((unsigned long *) value);
@@ -9232,7 +9228,7 @@ static int megastty( struct mpchan *mpc, struct tty_struct *tty,
 {
 	int win16;
 	int rc = 0;
-	struct termios *tp = tty->termios;
+	struct ktermios *tp = tty->termios;
 	struct marb_struct *curmarb;
 	struct lmx_struct *lmx;
 	int slot_chan, port, ldv;
@@ -9806,7 +9802,7 @@ STATIC int eqnx_diagioctl(struct inode *ip, struct file *fp, unsigned int cmd,
 	struct mpchan *mpc;
 	struct mpdev *mpd;
 	register icpiaddr_t icpi;
-	struct termios *tp;
+	struct ktermios *tp;
 	int rc = 0, minor;
 	unsigned int length;
 	int win16;
@@ -9886,7 +9882,7 @@ STATIC int eqnx_diagioctl(struct inode *ip, struct file *fp, unsigned int cmd,
 
 		if (write_wakeup_deferred) {
 			write_wakeup_deferred = 0;
-			mpc->mpc_tty->ldisc.write_wakeup(mpc->mpc_tty);
+			mpc->mpc_tty->ldisc->ops.write_wakeup(mpc->mpc_tty);
 		}
 
 		break;
@@ -11097,23 +11093,23 @@ int register_eqnx_dev(void)
 	memset(eqnx_ttys, 0, (sizeof(struct tty_struct *) 
 			* nmegaport * NCHAN_BRD));
 	if((eqnx_termios = 
-		(struct termios **)vmalloc(sizeof(struct termios *) 
-			* nmegaport * NCHAN_BRD)) == (struct termios **) NULL){
-		printk("EQUINOX: Failed to allocate virtual address space of size %d for eqnx_termios\n", (unsigned int)(sizeof(struct termios *) * nmegaport * NCHAN_BRD));
+		(struct ktermios **)vmalloc(sizeof(struct ktermios *) 
+			* nmegaport * NCHAN_BRD)) == (struct ktermios **) NULL){
+		printk("EQUINOX: Failed to allocate virtual address space of size %d for eqnx_termios\n", (unsigned int)(sizeof(struct ktermios *) * nmegaport * NCHAN_BRD));
 		return(-1);
 	}
 
-	memset(eqnx_termios, 0, (sizeof(struct termios *) 
+	memset(eqnx_termios, 0, (sizeof(struct ktermios *) 
 			* nmegaport * NCHAN_BRD));
 	
 	if((eqnx_termioslocked = 
-		(struct termios **)vmalloc(sizeof(struct termios *) 
-			* nmegaport * NCHAN_BRD)) == (struct termios **) NULL){
+		(struct ktermios **)vmalloc(sizeof(struct ktermios *) 
+			* nmegaport * NCHAN_BRD)) == NULL){
 		printk("EQUINOX: Failed to allocate virtual address space of size %d for eqnx_termioslocked\n", 
-		(unsigned int)(sizeof(struct termios *) * nmegaport * NCHAN_BRD));
+		(unsigned int)(sizeof(struct ktermios *) * nmegaport * NCHAN_BRD));
 		return(-1);
 	}
-	memset(eqnx_termioslocked, 0, (sizeof(struct termios *) 
+	memset(eqnx_termioslocked, 0, (sizeof(struct ktermios *) 
 			* nmegaport * NCHAN_BRD));
 	for (i =0, j = 0; i < nmegaport; i += 2, j++){
 		memset(&eqnx_driver[j], 0, sizeof(struct tty_driver));
@@ -11135,32 +11131,32 @@ int register_eqnx_dev(void)
 			eqnx_driver[j].type = TTY_DRIVER_TYPE_SERIAL;
 		eqnx_driver[j].subtype = SERIAL_TYPE_NORMAL;
 			eqnx_driver[j].init_termios = eqnx_deftermios;
-			eqnx_driver[j].flags = TTY_DRIVER_REAL_RAW |
-				TTY_DRIVER_NO_DEVFS;
-			eqnx_driver[j].termios = 
-			&eqnx_termios[j * 256];
-			eqnx_driver[j].termios_locked = 
-				&eqnx_termioslocked[j * 256];
-			eqnx_driver[j].open = eqnx_open;
-			eqnx_driver[j].close = eqnx_close;
-			eqnx_driver[j].write = eqnx_write;
-			eqnx_driver[j].put_char = eqnx_put_char;
-			eqnx_driver[j].flush_chars = eqnx_flush_chars;
-			eqnx_driver[j].write_room = eqnx_write_room;
-			eqnx_driver[j].chars_in_buffer = eqnx_chars_in_buffer;
-			eqnx_driver[j].flush_buffer = eqnx_flush_buffer;
-			eqnx_driver[j].ioctl = eqnx_ioctl;
-			eqnx_driver[j].throttle = eqnx_throttle;
-			eqnx_driver[j].unthrottle = eqnx_unthrottle;
-			eqnx_driver[j].set_termios = eqnx_set_termios;
-			eqnx_driver[j].stop = eqnx_stop;
-			eqnx_driver[j].start = eqnx_start;
-			eqnx_driver[j].hangup = eqnx_hangup;
+			eqnx_driver[j].flags = TTY_DRIVER_REAL_RAW | TTY_DRIVER_DYNAMIC_DEV;
+			eqnx_driver[j].termios = &eqnx_termios[j * 256];
+			eqnx_driver[j].termios_locked = &eqnx_termioslocked[j * 256];
+                        struct tty_operations *_ops;
+			_ops = vmalloc(sizeof(struct tty_operations));
+			_ops->open = &eqnx_open;
+			_ops->close = &eqnx_close;
+			_ops->write = &eqnx_write;
+			_ops->put_char = &eqnx_put_char;
+			_ops->flush_chars = &eqnx_flush_chars;
+			_ops->write_room = &eqnx_write_room;
+			_ops->chars_in_buffer = &eqnx_chars_in_buffer;
+			_ops->flush_buffer = &eqnx_flush_buffer;
+			_ops->ioctl = &eqnx_ioctl;
+			_ops->throttle = &eqnx_throttle;
+			_ops->unthrottle = &eqnx_unthrottle;
+			_ops->set_termios = &eqnx_set_termios;
+			_ops->stop = &eqnx_stop;
+			_ops->start = &eqnx_start;
+			_ops->hangup = &eqnx_hangup;
 #if	(LINUX_VERSION_CODE >= 132608)
 		/* 2.6+ kernels */
-		eqnx_driver[j].tiocmget = eqnx_tiocmget;
-		eqnx_driver[j].tiocmset = eqnx_tiocmset;
+		_ops->tiocmget = eqnx_tiocmget;
+		_ops->tiocmset = eqnx_tiocmset;
 #endif
+		eqnx_driver[j].ops = _ops;
 	
 #if (LINUX_VERSION_CODE < 132096)
 		/*
@@ -11418,7 +11414,7 @@ static void sst_write1(struct mpchan *mpc, int func_type)
 			SSTMINOR(mpc->mpc_major, mpc->mpc_minor));
 #endif
 		/* signal write wakeup when safe to call ldisc */
-		if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) && tty->ldisc.write_wakeup)
+		if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) && tty->ldisc->ops.write_wakeup)
 			write_wakeup_deferred++;
 		wake_up_interruptible(&tty->write_wait);
 	}
@@ -12288,7 +12284,7 @@ void ramp_init_modem( struct mpchan *mpc)
    ushort_t d;
    struct marb_struct oldmarb;
    struct marb_struct *curmarb;
-   volatile register struct termios *tiosp;
+   volatile register struct ktermios *tiosp;
    icpiaddr_t icpi;
    icpoaddr_t icpo;
    int slot_chan, ii, lmx, port, retv;
