@@ -1089,19 +1089,8 @@ modem_wait:
 	tp = mpc->mpc_tty;
 
 	if (tp->termios == NULL) {
-// #if     (LINUX_VERSION_CODE < 132608)
-// 		/* 2.2 and 2.4 kernels */
-// 		if (tty->driver.subtype == SERIAL_TYPE_NORMAL)
-// 			*tp->termios = *mpc->normaltermios;
-// #if (LINUX_VERSION_CODE < 132096)
-// 		/* 2.2 kernels */
-// 		else
-// 			*tp->termios = *mpc->callouttermios;
-// #endif
-// #else
 		/* 2.6 kernels */
 		*tp->termios = *mpc->normaltermios;
-// #endif
 	}
 
 /*
@@ -1209,13 +1198,8 @@ modem_wait:
 				    ((tp->termios->c_cflag & CLOCAL) || 
 				     (mpc->carr_state)) &&
 
-#if	(LINUX_VERSION_CODE < 132608)
-				/* 2.2 and 2.4 kernels */
-				     ((mpc->flags & ASYNC_CALLOUT_ACTIVE) == 0)) {
-#else
 				/* 2.6 kernels */
 				     (1)) {
-#endif
 
 #ifdef DEBUG
 	printk("device %d open returning with c_cflag = %o, carr_state = %d\n", d, tp->termios->c_cflag, mpc->carr_state);
@@ -1422,8 +1406,10 @@ static void eqnx_close(struct tty_struct * tty, struct file * filp)
 	mpc->mpc_icpi->ssp.cin_attn_ena &= ~ENA_DCD_CNG;
 	mpc->mpc_icpo->ssp.cout_cpu_req &= ~TX_SUSP;
 	set_bit(TTY_IO_ERROR, &tty->flags);
-	if (tty->ldisc->ops.flush_buffer)
-		(tty->ldisc->ops.flush_buffer)(tty);
+
+	// TODO: check flush_buffer dereferences in this if statement!
+	if (tty->ldisc->ops->flush_buffer)
+		(tty->ldisc->ops->flush_buffer)(tty);
 #ifdef DEBUG
 	printk("after ldisc->ops.flush_buffer for device %d\n",d);
 #endif
@@ -1816,7 +1802,7 @@ static void eqnx_put_char(struct tty_struct *tty, unsigned char ch)
 
 		if (write_wakeup_deferred) {
 			write_wakeup_deferred = 0;
-			tty->ldisc->ops.write_wakeup(tty);
+			tty->ldisc->ops->write_wakeup(tty);
 		}
 	} else{
 		if (eqnx_txcooksize >= XMIT_BUF_SIZE -1){
@@ -1863,7 +1849,7 @@ static void eqnx_flush_chars(struct tty_struct *tty)
 
 		if (write_wakeup_deferred) {
 			write_wakeup_deferred = 0;
-			tty->ldisc->ops.write_wakeup(tty);
+			tty->ldisc->ops->write_wakeup(tty);
 		}
 	}
 }
@@ -2087,7 +2073,7 @@ static void eqnx_flush_buffer(struct tty_struct *tty)
 
 	if (write_wakeup_deferred) {
 		write_wakeup_deferred = 0;
-		tty->ldisc->ops.write_wakeup(tty);
+		tty->ldisc->ops->write_wakeup(tty);
 	}
 }
 
@@ -2174,7 +2160,7 @@ static void eqnx_flush_buffer_locked(struct tty_struct *tty)
 	wake_up_interruptible(&tty->write_wait);
 	/* signal write wakeup when safe to call ldisc */
 	if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) &&
-		tty->ldisc->ops.write_wakeup)
+		tty->ldisc->ops->write_wakeup)
 		write_wakeup_deferred++;
 }
 
@@ -2502,7 +2488,7 @@ static void eqnx_hangup(struct tty_struct *tty)
 
 	if (write_wakeup_deferred) {
 		write_wakeup_deferred = 0;
-		tty->ldisc->ops.write_wakeup(tty);
+		tty->ldisc->ops->write_wakeup(tty);
 	}
 }
 
@@ -3722,28 +3708,15 @@ printk("eqnx_init:queue size for board %d = %d\n\n", k, mpd->mpd_hwq->hwq_size);
 #endif
 				mpc->closing_wait = CLSTIMEO;
 				mpc->close_delay = EQNX_CLOSEDELAY;
-#if	(LINUX_VERSION_CODE < 132608)
-				/* 2.2. and 2.4 kernels */
-				mpc->tqhangup.routine = eqnx_dohangup;
-#else
+
 				/* 2.6+ kernels */
-				mpc->tqhangup.func = eqnx_dohangup;
-#endif
+				mpc->tqhangup.func = eqnx_dohangup;  // TODO: Make less BAD
 				mpc->tqhangup.data = mpc;
 
 				/*
 				** initialize each of the wait queues
 				*/
-#if	(LINUX_VERSION_CODE < 132096)
-				/* kernels before 2.4 */
-				init_waitqueue(&mpc->open_wait);
-				init_waitqueue(&mpc->close_wait);
-				init_waitqueue(&mpc->raw_wait);
-				init_waitqueue(&mpc->mpc_mpa_slb);
-				init_waitqueue(&mpc->mpc_mpa_clb);
-				init_waitqueue(&mpc->mpc_mpa_rst);
-				init_waitqueue(&mpc->mpc_mpa_call_back);
-#else
+
 				/* 2.4 kernels and after */
 				mpc->open_wait_wait = 0;
 				mpc->mpc_mpa_slb_wait = 0;
@@ -3757,7 +3730,6 @@ printk("eqnx_init:queue size for board %d = %d\n\n", k, mpd->mpd_hwq->hwq_size);
 				init_waitqueue_head(&mpc->mpc_mpa_clb);
 				init_waitqueue_head(&mpc->mpc_mpa_rst);
 				init_waitqueue_head(&mpc->mpc_mpa_call_back);
-#endif
 
 				mpc->mpc_last_esc = 0xffff;
 				mpc->mpc_esc_timo = 0;
@@ -4402,9 +4374,11 @@ void cleanup_module(void)
 #ifdef DEBUG
 	printk("cleanup_module: trying to unregister eqnx_diag\n");
 #endif
-	if ((i = unregister_chrdev(diag_num, "eqnxdiag")))
-		printk("EQUINOX: failed to unregister diag device, errno=%d\n",
-			-i);
+
+        // NOTE: as of 2.6.36, unregister_chrdev has a void return type.
+	unregister_chrdev(diag_num, "eqnxdiag");  // We used to check for issues,
+						  //  but now we can't. :(
+
 #ifdef DEBUG
 	printk("cleanup_module: trying to free meg_chan\n");
 #endif
@@ -6941,7 +6915,7 @@ void sstpoll(unsigned long arg)
 								if (write_wakeup_deferred) {
 									spin_unlock_irqrestore(&mpd->mpd_lock, flags);
 									write_wakeup_deferred = 0;
-									mpc->mpc_tty->ldisc->ops.write_wakeup(mpc->mpc_tty);
+									mpc->mpc_tty->ldisc->ops->write_wakeup(mpc->mpc_tty);
 									spin_lock_irqsave(&mpd->mpd_lock, flags);
 								}
 							}
@@ -6967,7 +6941,7 @@ void sstpoll(unsigned long arg)
 								if (write_wakeup_deferred) {
 									spin_unlock_irqrestore(&mpd->mpd_lock, flags);
 									write_wakeup_deferred = 0;
-									mpc->mpc_tty->ldisc->ops.write_wakeup(mpc->mpc_tty);
+									mpc->mpc_tty->ldisc->ops->write_wakeup(mpc->mpc_tty);
 									spin_lock_irqsave(&mpd->mpd_lock, flags);
 								}
 							}
@@ -7135,7 +7109,7 @@ printk("ev_lmx_chg  rng_last=%x  port=%d\n",icp->icp_rng_last,port);
 						if (write_wakeup_deferred) {
 							spin_unlock_irqrestore(&mpd->mpd_lock, flags);
 							write_wakeup_deferred = 0;
-							mpc->mpc_tty->ldisc->ops.write_wakeup(mpc->mpc_tty);
+							mpc->mpc_tty->ldisc->ops->write_wakeup(mpc->mpc_tty);
 							spin_lock_irqsave(&mpd->mpd_lock, flags);
 						}
 					}
@@ -7160,7 +7134,7 @@ printk("ev_lmx_chg  rng_last=%x  port=%d\n",icp->icp_rng_last,port);
 						if (write_wakeup_deferred) {
 							spin_unlock_irqrestore(&mpd->mpd_lock, flags);
 							write_wakeup_deferred = 0;
-							mpc->mpc_tty->ldisc->ops.write_wakeup(mpc->mpc_tty);
+							mpc->mpc_tty->ldisc->ops->write_wakeup(mpc->mpc_tty);
 							spin_lock_irqsave(&mpd->mpd_lock, flags);
 						}
 					}
@@ -8157,8 +8131,8 @@ static void megatxint(struct mpchan *mpc)
 		SSTMINOR(mpc->mpc_major, mpc->mpc_minor));
 #endif
 	if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) 
-			&& tty->ldisc->ops.write_wakeup)
-			(tty->ldisc->ops.write_wakeup)(tty);
+			&& tty->ldisc->ops->write_wakeup)
+			(tty->ldisc->ops->write_wakeup)(tty);
 		wake_up_interruptible(&tty->write_wait);
 }
 
@@ -8749,7 +8723,7 @@ static void megasint(register struct mpchan *mpc, unsigned long flags)
 			** drop mpdev board lock, reacquire after receive_buf
 			*/
 			spin_unlock_irqrestore(&mpc->mpc_mpd->mpd_lock, flags);
-			tty->ldisc->ops.receive_buf(tty, &cbuf, &fbuf, 1);
+			tty->ldisc->ops->receive_buf(tty, &cbuf, &fbuf, 1);
 			spin_lock_irqsave(&mpc->mpc_mpd->mpd_lock, flags);
 		}
 	}
@@ -9882,7 +9856,7 @@ STATIC int eqnx_diagioctl(struct inode *ip, struct file *fp, unsigned int cmd,
 
 		if (write_wakeup_deferred) {
 			write_wakeup_deferred = 0;
-			mpc->mpc_tty->ldisc->ops.write_wakeup(mpc->mpc_tty);
+			mpc->mpc_tty->ldisc->ops->write_wakeup(mpc->mpc_tty);
 		}
 
 		break;
@@ -11128,18 +11102,19 @@ int register_eqnx_dev(void)
 		}else{
 				eqnx_driver[j].num = 128;
 		}
-			eqnx_driver[j].type = TTY_DRIVER_TYPE_SERIAL;
+		eqnx_driver[j].type = TTY_DRIVER_TYPE_SERIAL;
 		eqnx_driver[j].subtype = SERIAL_TYPE_NORMAL;
-			eqnx_driver[j].init_termios = eqnx_deftermios;
-			eqnx_driver[j].flags = TTY_DRIVER_REAL_RAW | TTY_DRIVER_DYNAMIC_DEV;
-			eqnx_driver[j].termios = &eqnx_termios[j * 256];
-			eqnx_driver[j].termios_locked = &eqnx_termioslocked[j * 256];
-                        struct tty_operations *_ops;
+		eqnx_driver[j].init_termios = eqnx_deftermios;
+		eqnx_driver[j].flags = TTY_DRIVER_REAL_RAW | TTY_DRIVER_DYNAMIC_DEV;
+		eqnx_driver[j].termios = &eqnx_termios[j * 256];
+		eqnx_driver[j].termios_locked = &eqnx_termioslocked[j * 256];
+		{
+			struct tty_operations *_ops;
 			_ops = vmalloc(sizeof(struct tty_operations));
 			_ops->open = &eqnx_open;
 			_ops->close = &eqnx_close;
 			_ops->write = &eqnx_write;
-			_ops->put_char = &eqnx_put_char;
+			_ops->put_char = &eqnx_put_char; // TODO: FIXME
 			_ops->flush_chars = &eqnx_flush_chars;
 			_ops->write_room = &eqnx_write_room;
 			_ops->chars_in_buffer = &eqnx_chars_in_buffer;
@@ -11151,12 +11126,12 @@ int register_eqnx_dev(void)
 			_ops->stop = &eqnx_stop;
 			_ops->start = &eqnx_start;
 			_ops->hangup = &eqnx_hangup;
-#if	(LINUX_VERSION_CODE >= 132608)
-		/* 2.6+ kernels */
-		_ops->tiocmget = eqnx_tiocmget;
-		_ops->tiocmset = eqnx_tiocmset;
-#endif
-		eqnx_driver[j].ops = _ops;
+
+			/* 2.6+ kernels */
+			_ops->tiocmget = eqnx_tiocmget;
+			_ops->tiocmset = eqnx_tiocmset;
+			eqnx_driver[j].ops = _ops;
+		}
 	
 #if (LINUX_VERSION_CODE < 132096)
 		/*
@@ -11414,7 +11389,7 @@ static void sst_write1(struct mpchan *mpc, int func_type)
 			SSTMINOR(mpc->mpc_major, mpc->mpc_minor));
 #endif
 		/* signal write wakeup when safe to call ldisc */
-		if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) && tty->ldisc->ops.write_wakeup)
+		if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) && tty->ldisc->ops->write_wakeup)
 			write_wakeup_deferred++;
 		wake_up_interruptible(&tty->write_wait);
 	}

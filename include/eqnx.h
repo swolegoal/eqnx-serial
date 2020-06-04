@@ -865,17 +865,10 @@ struct	mpchan {
 	uchar_t mpc_tgpg;		/* select page tags buffer */
 	int	flags;			/* Linux specific serial flags */
 
-#if	(LINUX_VERSION_CODE < 132096)
-	/* kernels before 2.4 */
-	struct	wait_queue *open_wait;
-	struct	wait_queue *close_wait;
-	struct	wait_queue *raw_wait;
-#else
 	/* 2.4 kernels and after */
 	wait_queue_head_t open_wait;
 	wait_queue_head_t close_wait;
 	wait_queue_head_t raw_wait;
-#endif
 	int	open_wait_wait;
 
 	int	refcount;
@@ -888,13 +881,9 @@ struct	mpchan {
 	int	closing_wait;
 	int	custom_divisor;
 	int	baud_base;
-#if	(LINUX_VERSION_CODE < 132608)
-	/* kernels before 2.6 */
-	struct tq_struct	tqhangup;
-#else
+
 	/* 2.6 kernels and after */
 	struct work_struct	tqhangup;
-#endif
 
 	int mpc_block;
 	int carr_state;
