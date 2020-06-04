@@ -1382,26 +1382,16 @@ static void eqnx_close(struct tty_struct * tty, struct file * filp)
 	*/
 	spin_lock_irqsave(&mpd->mpd_lock, flags);
 	if (tty_hung_up_p(filp)){
-#if	(LINUX_VERSION_CODE < 132608)
-	/* 2.2 and 2.4 kernels */
-		MOD_DEC_USE_COUNT;
-#else
 	/* 2.6 kernels */
 		module_put(THIS_MODULE);
-#endif
 		spin_unlock_irqrestore(&mpd->mpd_lock, flags);
 		return;
 	}
 	if (mpc->refcount)
 		mpc->refcount -= 1;
 	if (mpc->refcount) {
-#if	(LINUX_VERSION_CODE < 132608)
-	/* 2.2 and 2.4 kernels */
-		MOD_DEC_USE_COUNT;
-#else
 	/* 2.6 kernels */
 		module_put(THIS_MODULE);
-#endif
 		spin_unlock_irqrestore(&mpd->mpd_lock, flags);
 #ifdef DEBUG
 		printk("device %d being closed with refcount %d \n", 
@@ -10882,13 +10872,8 @@ int eqnx_diagclose(struct inode *ip, struct file *fp)
 {
 	int d;
 
-#if	(LINUX_VERSION_CODE < 132608)
-	/* 2.2 and 2.4 kernels */
-	MOD_DEC_USE_COUNT;
-#else
 	/* 2.6 kernels */
 	module_put(THIS_MODULE);
-#endif
 	d = MINOR(ip->i_rdev);
 	if (!d)
 		return (0);
@@ -10911,19 +10896,9 @@ static int SSTMINOR(unsigned int maj, unsigned int min)
 	if ((maj < din_num[0]) || (maj > diag_num)) {
 		return(-1);
 	}
-#if (LINUX_VERSION_CODE < 132096)
-	if (maj < dout_num[0]){ 
-#endif
 		for ( i=0; i < (maxbrd /2); i++)
 			if (maj == din_num[i])
 				break;
-#if (LINUX_VERSION_CODE < 132096)
-	}else {
-		for ( i=0; i < (maxbrd /2); i++)
-			if (maj == dout_num[i])
-				break;
-	}
-#endif
 	return((i * 256) + min);
 }
 
@@ -11126,18 +11101,6 @@ int register_eqnx_dev(void)
 	memset(eqnx_driver, 0, (sizeof(struct tty_driver) 
 			* num_drivers));
 
-#if (LINUX_VERSION_CODE < 132096)
-	if((eqnx_callout_driver = 
-		(struct tty_driver *)vmalloc(sizeof(struct tty_driver) 
-			* num_drivers)) 
-			== (struct tty_driver *) NULL){
-		printk("EQUINOX: Failed to allocate virtual address space of size %d for eqnx_callout_driver\n", (unsigned int)(sizeof(struct tty_driver) * num_drivers));
-		return(-1);
-	}
-	memset(eqnx_callout_driver, 0, (sizeof(struct tty_driver) 
-			* num_drivers));
-#endif	
-
 	if((eqnx_ttys = 
 		(struct tty_struct **)vmalloc(sizeof(struct tty_struct *) 
 			* nmegaport * NCHAN_BRD)) 
@@ -11168,10 +11131,6 @@ int register_eqnx_dev(void)
 			* nmegaport * NCHAN_BRD));
 	for (i =0, j = 0; i < nmegaport; i += 2, j++){
 		memset(&eqnx_driver[j], 0, sizeof(struct tty_driver));
-#if (LINUX_VERSION_CODE < 132096)
-		memset(&eqnx_callout_driver[j], 0, sizeof(struct tty_driver));
-		eqnx_callout_driver[j].magic = 
-#endif
 			eqnx_driver[j].magic 
 			= TTY_DRIVER_MAGIC;
 		eqnx_driver[j].name = "Eqnx tty";
@@ -11181,123 +11140,35 @@ int register_eqnx_dev(void)
 		eqnx_driver[j].major = 0;
 #endif
 
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].minor_start = 
-#endif
 			eqnx_driver[j].minor_start = 0;
 		if (nmegaport >= (i + 2)){
-#if (LINUX_VERSION_CODE < 132096)
-			eqnx_callout_driver[j].num = 
-#endif
 				eqnx_driver[j].num = 256;
 		}else{
-#if (LINUX_VERSION_CODE < 132096)
-			eqnx_callout_driver[j].num = 
-#endif
 				eqnx_driver[j].num = 128;
 		}
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].type = 
-#endif
-			eqnx_driver[j].type 
-			= TTY_DRIVER_TYPE_SERIAL;
+			eqnx_driver[j].type = TTY_DRIVER_TYPE_SERIAL;
 		eqnx_driver[j].subtype = SERIAL_TYPE_NORMAL;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].init_termios = 
-#endif
 			eqnx_driver[j].init_termios = eqnx_deftermios;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].flags = 
-			eqnx_driver[j].flags = TTY_DRIVER_REAL_RAW;
-#else
 			eqnx_driver[j].flags = TTY_DRIVER_REAL_RAW |
 				TTY_DRIVER_NO_DEVFS;
-#endif
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].refcount = 
-#endif
-#if	(LINUX_VERSION_CODE < 132608)
-/* 2.2 and 2.4 kernels */
-			eqnx_driver[j].refcount = 
-			&eqnx_refcount;
-#endif
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].table = 
-#endif
-#if	(LINUX_VERSION_CODE < 132608)
-/* 2.2 and 2.4 kernels */
-			eqnx_driver[j].table = 
-			&eqnx_ttys[j * 256];
-#endif
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].termios = 
-#endif
 			eqnx_driver[j].termios = 
 			&eqnx_termios[j * 256];
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].termios_locked = 
-#endif
 			eqnx_driver[j].termios_locked = 
 				&eqnx_termioslocked[j * 256];
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].open = 
-#endif
 			eqnx_driver[j].open = eqnx_open;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].close = 
-#endif
 			eqnx_driver[j].close = eqnx_close;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].write = 
-#endif
 			eqnx_driver[j].write = eqnx_write;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].put_char = 
-#endif
 			eqnx_driver[j].put_char = eqnx_put_char;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].flush_chars = 
-#endif
 			eqnx_driver[j].flush_chars = eqnx_flush_chars;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].write_room = 
-#endif
 			eqnx_driver[j].write_room = eqnx_write_room;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].chars_in_buffer = 
-#endif
 			eqnx_driver[j].chars_in_buffer = eqnx_chars_in_buffer;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].flush_buffer = 
-#endif
 			eqnx_driver[j].flush_buffer = eqnx_flush_buffer;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].ioctl = 
-#endif
 			eqnx_driver[j].ioctl = eqnx_ioctl;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].throttle = 
-#endif
 			eqnx_driver[j].throttle = eqnx_throttle;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].unthrottle = 
-#endif
 			eqnx_driver[j].unthrottle = eqnx_unthrottle;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].set_termios= 
-#endif
 			eqnx_driver[j].set_termios = eqnx_set_termios;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].stop = 
-#endif
 			eqnx_driver[j].stop = eqnx_stop;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].start= 
-#endif
 			eqnx_driver[j].start = eqnx_start;
-#if (LINUX_VERSION_CODE < 132096)
-		eqnx_callout_driver[j].hangup = 
-#endif
 			eqnx_driver[j].hangup = eqnx_hangup;
 #if	(LINUX_VERSION_CODE >= 132608)
 		/* 2.6+ kernels */
