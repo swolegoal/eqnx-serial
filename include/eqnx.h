@@ -766,8 +766,6 @@ typedef	struct {
  * per-channel status information
  */
 
-struct	mpchan {
-	int	mpc_flags;
 #define MPC_WSEC	0x1		/* wakeup second session */
 #define MPC_MODEM	0x2		/* modem control lines in use */
 #define MPC_DIALOUT	0x4		/* line used as dial-out */
@@ -792,17 +790,9 @@ struct	mpchan {
 #define MPC_DSCOPEW	0x200000	/* Port in Datascope Mode for writes*/
 #define MPC_PFREEZE     0x400000        /* freeze in Poll */
 #define MPC_DEFER       0x800000        /* Poll processing deferred */
-	uchar_t	mpc_rxmask;		/* receive character mask */
-	uchar_t	mpc_chan;		/* channel number on this device */
-	uchar_t	mpc_wmode;		/* write mode (see below) */
-	uchar_t	mpc_rmode;		/* read mode (see below) */
 #define LINEDISCIPLINE	0		/* normal line discipline */
 #define LD0SUBSET	1		/* use subset of ld 0 */
 #define BLOCKCOPY	2		/* block copy */
-	ushort	mpc_last_rcv_cnt;	/* previous icp_rxnext value */
-	ushort	mpc_ptimer;		/* printer timer */
-	ushort	mpc_btimer;		/* break on timer */
-	uint_t	mpc_param;		/* overwrite parameters */
 #define	IXONSET	1			/* force ixon */
 #define	IXANYIG	2			/* ignore ixany setup */
 #define IOCTCTS 0x40
@@ -810,10 +800,21 @@ struct	mpchan {
 #define IOCTLLB 0x400
 #define IOCTXON 0x800
 #define IOCTLCK 0x1000			/* force lock port settings */
-	icpiaddr_t mpc_icpi;		/* icp input channel reg's ptr */
 #define mpc_cin mpc_icpi
-	icpoaddr_t mpc_icpo;		/* icp output channel reg's ptr */
 #define mpc_cout mpc_icpo
+
+struct	mpchan {
+	int	mpc_flags;
+	uchar_t	mpc_rxmask;		/* receive character mask */
+	uchar_t	mpc_chan;		/* channel number on this device */
+	uchar_t	mpc_wmode;		/* write mode (see below) */
+	uchar_t	mpc_rmode;		/* read mode (see below) */
+	ushort	mpc_last_rcv_cnt;	/* previous icp_rxnext value */
+	ushort	mpc_ptimer;		/* printer timer */
+	ushort	mpc_btimer;		/* break on timer */
+	uint_t	mpc_param;		/* overwrite parameters */
+	icpiaddr_t mpc_icpi;		/* icp input channel reg's ptr */
+	icpoaddr_t mpc_icpo;		/* icp output channel reg's ptr */
 	icpbaddr_t mpc_icpb;		/* pointer to freezed bank */
 	icpaddr_t mpc_icp;		/* pointer to icp_struct */	
 	ushort	mpc_cin_events;		/* pending input events */
