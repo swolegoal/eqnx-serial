@@ -496,7 +496,7 @@ int main(int argc, char **argv)
 #endif	/* ISA_ENAB */
 
 		case 'a':{
-		unsigned char devname[16];
+		char devname[16];
 		struct SttyStatus sttystatus;
 
 		if (argc < 3){
@@ -637,7 +637,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 'm':{
-		unsigned char devname[16];
+		char devname[16];
 		struct ModemStatus mdstatus;
 
 		if (argc < 3){
@@ -700,7 +700,7 @@ int main(int argc, char **argv)
 		}
 
 		case 's': {
-		unsigned char devname[16];
+		char devname[16];
 
 		if (argc < 3){
 			fprintf(stderr, "Usage: %s -s [1a1-8h1]\n", whoami);
