@@ -46,7 +46,7 @@ static int hx = 19;
 static int hy = 7;
 FILE *helpfp = NULL;
 char helpname[64];
-static void getline();
+static void _getline();
 void help();
 
 static void light();
@@ -1216,7 +1216,7 @@ void load_help( char *hn)
 	strcpy(helpname, hn);
 	if ((helpfp = fopen(helpname, "r")) == NULL)
 		return;
-	getline(lineh);
+	_getline(lineh);
 	while (1)	{
 		if (hp == MAXHELPS)
 			break;
@@ -1228,17 +1228,17 @@ void load_help( char *hn)
 		hps[hp].w = 18;
 		strncpy(hps[hp].hname, lineh+1, 8);
 		hps[hp].hptr = ftell(helpfp);
-		getline(lineh);
+		_getline(lineh);
 		while (*lineh != '<')	{
 			hps[hp].h++;
 			hps[hp].w = max(hps[hp].w, strlen(lineh)+2);
-			getline(lineh);
+			_getline(lineh);
 		}
 		hp++;
 	}
 }
 /* -------- get a line of text from the help file -------- */
-static void getline( char *lineh)
+static void _getline( char *lineh)
 {
 	if (fgets(lineh, 80, helpfp) == NULL)
 		strcpy(lineh, "<end>");
@@ -1270,7 +1270,7 @@ void help()
 
 		fseek(helpfp, hps[ch].hptr, 0);
 		for (i = 0; i < hps[ch].h-3; i++)	{
-			getline(ln);
+			_getline(ln);
 			wcursor(wnd, 1, i);
 			Wprintf(wnd, ln);
 		}
