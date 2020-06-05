@@ -316,7 +316,7 @@ static void mega_rdv_wait( unsigned long arg);
 static void mega_ldv_hangup( icpaddr_t icp);
 static void mega_rdv_delta( icpaddr_t icp, struct mpchan *mpc, int rng_state);
 static int mega_rng_delta( icpaddr_t icp, int reason, int nchan);
-static void eqnx_dohangup(void *arg);
+static void eqnx_dohangup(struct work_struct *arg);
 static void eqnx_flush_buffer(struct tty_struct *tty);
 static void eqnx_flush_buffer_locked(struct tty_struct *tty);
 static void eqnx_delay(int len);
@@ -1762,22 +1762,27 @@ end:
 **
 ** Copy individual output characters to a temporary local buffer.
 ** This buffer will be copied to the board with memcpy to save time.
+**
+** Tux Mods: used to have a void return type.  Maybe returns truthy 1 if it
+** wrote a character to a buffer, else falsy 0???  TODO: verify this!
 */
-static void eqnx_put_char(struct tty_struct *tty, unsigned char ch)
+static int eqnx_put_char(struct tty_struct *tty, unsigned char ch)
 {
 	register struct mpchan *mpc = (struct mpchan *)tty->driver_data;
 	struct mpdev *mpd;
 	unsigned long flags;
+	int success;
 #ifdef DEBUG
 	printk("eqnx_put_char(tty=%x,ch=%x)\n", 
 		(unsigned int) SSTMINOR(mpc->mpc_major, mpc->mpc_minor), 
 		(int) ch);
 #endif
 
+	success = 0;
 	if (tty == (struct tty_struct *) NULL)
-		return;
+		return success;
 	if (mpc == (struct mpchan *) NULL)
-		return;
+		return success;
 	if (tty != eqnx_txcooktty) {
 		if (eqnx_txcooktty != (struct tty_struct *) NULL)
 			eqnx_flush_chars(eqnx_txcooktty);
@@ -1785,7 +1790,7 @@ static void eqnx_put_char(struct tty_struct *tty, unsigned char ch)
 	}
 	mpd = mpc->mpc_mpd;
 	if (mpd == (struct mpdev *) NULL)
-		return;
+		return success;
 	if (mpd->mpd_board_def->asic != SSP64) {  
 		/* only applies to SSP2/SSP4 */
 		spin_lock_irqsave(&mpd->mpd_lock, flags);
@@ -1797,6 +1802,7 @@ static void eqnx_put_char(struct tty_struct *tty, unsigned char ch)
 			mpc->xmit_buf[mpc->xmit_head++] = ch;
 			mpc->xmit_head &= XMIT_BUF_SIZE-1;
 			mpc->xmit_cnt++;
+			success = 1;
 		}
 		spin_unlock_irqrestore(&mpd->mpd_lock, flags);
 
@@ -1810,7 +1816,9 @@ static void eqnx_put_char(struct tty_struct *tty, unsigned char ch)
 			eqnx_txcooktty = tty;
 		}
 		eqnx_txcookbuf[eqnx_txcooksize++] = ch;
+		success = 1;
 	}
+	return success;
 }
 
 /*
@@ -3710,8 +3718,8 @@ printk("eqnx_init:queue size for board %d = %d\n\n", k, mpd->mpd_hwq->hwq_size);
 				mpc->close_delay = EQNX_CLOSEDELAY;
 
 				/* 2.6+ kernels */
-				mpc->tqhangup.func = eqnx_dohangup;  // TODO: Make less BAD
-				mpc->tqhangup.data = mpc;
+				mpc->tqhangup.func = &eqnx_dohangup;  // TODO: Make less BAD
+				//mpc->tqhangup.data = mpc;
 
 				/*
 				** initialize each of the wait queues
@@ -6645,12 +6653,12 @@ static void eqnx_delay(int len)
 ** 	eqnx_dohangup() -> tty->hangup() -> eqnx_hangup()
 ** 
 */
-static void eqnx_dohangup(void *arg)
+static void eqnx_dohangup(struct work_struct *arg)
 {
 	struct mpchan *mpc;
 
 
-	mpc = (struct mpchan *) arg;
+	mpc = container_of(arg, struct mpchan, tqhangup);
 	if (mpc == (struct mpchan *) NULL)
 		return;
 	if (mpc->mpc_tty == (struct tty_struct *) NULL)
@@ -8210,7 +8218,7 @@ static void megainput( register struct mpchan *mpc, unsigned long flags)
 		SSTMINOR(mpc->mpc_major, mpc->mpc_minor), 
 		tp->flip.count, rcv_cnt);
 #endif
-	rcv_cnt = MIN(rcv_cnt, (2 * TTY_FLIPBUF_SIZE));
+	// rcv_cnt = MIN(rcv_cnt, (2 * TTY_FLIPBUF_SIZE));
 
 #if	(LINUX_VERSION_CODE >= 132624)
 	/* 2.6.16+ kernels */

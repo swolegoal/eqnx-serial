@@ -51,7 +51,7 @@ void fill_board_struct( struct eqnbrdstatus *bsptr, int brd);
 int open_devfile(char *, struct stat *);
 int log_to_phys(int);
 
-#include "brdtab.c" 
+#include "brdtab.c"
 
 int main(int argc, char **argv)
 {

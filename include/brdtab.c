@@ -24,8 +24,7 @@
 ** All known and valid board definitions
 */
 
-static
-struct brdtab_t board_table[] = {
+static struct brdtab_t board_table[] = {
 
    { 0x8,  0x8,  PCI_BUS,  SSP64, 1, 64,  POLL40,      "SST-64P" },
    { 0x8,  NOID, ISA_BUS,  SSP64, 1, 64,  POLL40,      "SST-64I" },
@@ -150,7 +149,7 @@ struct brdtab_t board_table[] = {
 /*
 ** total number of entries in board_table
 */
-static int brdtab_entries = sizeof board_table / sizeof (struct brdtab_t);
+static int brdtab_entries = sizeof (board_table) / sizeof (struct brdtab_t);
 
 /*
 ** find_board(id, bus)
@@ -160,17 +159,21 @@ static int brdtab_entries = sizeof board_table / sizeof (struct brdtab_t);
 **
 **	returns NULL if not found.
 */
+
 struct brdtab_t * find_board_def(unsigned short id, int bus)
 {
 	int	i;
-	struct	brdtab_t *brdtab_ptr = NULL;
-	unsigned char primary_id = NOID, secondary_id = NOID;
+	struct	brdtab_t *brdtab_ptr;
+	unsigned char primary_id, secondary_id;
+
+	brdtab_ptr = NULL;
+	primary_id = NOID; secondary_id = NOID;
 
 	/*
 	** First, extract the relevant parts from the id
 	*/
 	switch (bus) {
-		case PCI_BUS:
+		case PCI_BUS: {
 			primary_id = id & 0xFC;
 			secondary_id = (id & 0xFF00) >> 8;
 
@@ -183,9 +186,10 @@ struct brdtab_t * find_board_def(unsigned short id, int bus)
 				primary_id &= 0xF8;
 
 			break;
+		}
 
 		case ISA_BUS:
-		case EISA_BUS:
+		case EISA_BUS: {
 			primary_id = id & 0xF8;
 		
 			/*
@@ -197,12 +201,14 @@ struct brdtab_t * find_board_def(unsigned short id, int bus)
 				secondary_id = (id & 0xFF00) >> 8;
 
 			break;
+		}
 
-		case MCA_BUS:
+		case MCA_BUS: {
 			/* micro-channel boards have no id extension */
 			primary_id = id & 0xF8;
 			secondary_id = NOID;
 			break;	
+		}
 	}
 			
 	/*
